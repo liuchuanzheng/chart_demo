@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -21,7 +22,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -87,6 +87,29 @@ public class ChartView extends View {
     float startPointX = 0;
     float startPointY = 0;
 
+
+    //尺子的最大刻度
+    private int maxRuler = 51;
+    //尺子的最小刻度
+    private int minRuler = 0;
+    private Paint mRulerLinePaint;
+    private Paint mRulerTextPaint;
+    private boolean isCanMove;
+
+    //是否显示刻度尺
+    boolean isShowRuler = false;
+    //上次触摸点
+    int lastRulerX;
+    int lastRulerY;
+    //总平移距离
+    int totalRulerX;
+    //总平移距离
+    int totalRulerY;
+
+    int mRuler10Height = 40;
+    int mRuler5Height = 25;
+    int mRuler1Height = 15;
+    float mRulerDx = bigSpace/5;
 
 
 
@@ -177,6 +200,22 @@ public class ChartView extends View {
         //不填充
         pointPaint.setStyle(Paint.Style.STROKE);
 
+        initRulerPaint();
+
+    }
+
+    private void initRulerPaint() {
+        mRulerLinePaint = new Paint();
+        mRulerLinePaint.setColor(Color.parseColor("#FF0000"));
+        mRulerLinePaint.setAntiAlias(true);//抗锯齿
+        mRulerLinePaint.setStyle(Paint.Style.STROKE);
+        mRulerLinePaint.setStrokeWidth(4);
+        mRulerTextPaint = new Paint();
+        mRulerTextPaint.setColor(Color.parseColor("#FF0000"));
+        mRulerTextPaint.setAntiAlias(true);
+        mRulerTextPaint.setStyle(Paint.Style.FILL);
+        mRulerTextPaint.setStrokeWidth(1);
+        mRulerTextPaint.setTextSize(40);
     }
 
     @Override
@@ -188,6 +227,11 @@ public class ChartView extends View {
         drawBackgroundSquareLine(canvas);
         //画心电图点
         drawPoints(canvas);
+        //画标尺
+        if(isShowRuler){
+            drawRuler();
+        }
+
     }
 
     private void drawPoints(Canvas canvas) {
@@ -288,6 +332,58 @@ public class ChartView extends View {
         }
 
     }
+    private void drawRuler(){
+        //尺子也要随着放大而放大
+        //画横向尺子
+        canvas.save();
+        //因为手指拖动了
+        canvas.translate(totalRulerX,totalRulerY);
+        canvas.translate(200,1000);
+        canvas.drawLine(0, 0, maxRuler*mRulerDx*preScale, 0, mRulerLinePaint);
+        for (float i = minRuler; i < maxRuler; i++) {
+            if (i % 10 == 0) {
+                canvas.drawLine(0, 0, 0, mRuler10Height*preScale, mRulerLinePaint);
+                String text = i / 100 + "";
+                Rect rect = new Rect();
+                float txtWidth = mRulerTextPaint.measureText(text);
+                mRulerTextPaint.getTextBounds(text, 0, text.length(), rect);
+                canvas.drawText(text, 0 - txtWidth / 2, mRuler10Height*preScale + rect.height() + 10, mRulerTextPaint);
+            } else if (i % 5 == 0) {
+                canvas.drawLine(0, 0, 0, mRuler5Height*preScale, mRulerLinePaint);
+            } else {
+                canvas.drawLine(0, 0, 0, mRuler1Height*preScale, mRulerLinePaint);
+            }
+            canvas.translate(mRulerDx*preScale, 0);
+        }
+        canvas.restore();
+
+        //画竖向尺子
+        canvas.save();
+        canvas.translate(totalRulerX,totalRulerY);
+        canvas.rotate(90);
+        canvas.translate(1000,-200);
+        canvas.drawLine(0, 0, -(maxRuler*mRulerDx*preScale), 0, mRulerLinePaint);
+        for (float i = minRuler; i < maxRuler; i++) {
+            if (i % 10 == 0) {
+                canvas.drawLine(0, 0, 0, mRuler10Height*preScale, mRulerLinePaint);
+                String text = i / 100 + "";
+                Rect rect = new Rect();
+                float txtWidth = mRulerTextPaint.measureText(text);
+                mRulerTextPaint.getTextBounds(text, 0, text.length(), rect);
+                //为了把文字转向
+                canvas.save();
+                canvas.rotate(-90,0, 0 );
+                canvas.drawText(text, 0 - txtWidth -mRuler10Height*preScale-10*preScale,  rect.height()/2, mRulerTextPaint);
+                canvas.restore();
+            } else if (i % 5 == 0) {
+                canvas.drawLine(0, 0, 0, mRuler5Height*preScale, mRulerLinePaint);
+            } else {
+                canvas.drawLine(0, 0, 0, mRuler1Height*preScale, mRulerLinePaint);
+            }
+            canvas.translate(-mRulerDx*preScale, 0);
+        }
+        canvas.restore();
+    }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
@@ -359,8 +455,14 @@ public class ChartView extends View {
     }
 
     private void scrollMySelf(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        lastTranslateX= -distanceX;
-        lastTranslateY = -distanceY;
+        if (isShowRuler){
+            totalRulerX -= distanceX;
+            totalRulerY -= distanceY;
+        }else{
+            lastTranslateX= -distanceX;
+            lastTranslateY = -distanceY;
+        }
+
         invalidate();
 
     }
@@ -391,9 +493,14 @@ public class ChartView extends View {
         //设置监听关联
         mScaleGestureDetector.onTouchEvent(event);
         mGestureDetector.onTouchEvent(event);
+
         return true;
     }
-
+    //显示或隐藏标尺
+    public void showOrHideRuler(boolean isShow){
+        isShowRuler = isShow;
+        invalidate();
+    }
 
     public int dip2px(int dp) {
         float density = getContext().getResources().getDisplayMetrics().density;
