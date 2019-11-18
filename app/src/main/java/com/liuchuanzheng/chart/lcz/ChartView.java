@@ -48,7 +48,7 @@ public class ChartView extends View {
     private int mHeight;
     private int backGroundColor = Color.parseColor("#808080"); // view的背景颜色
     //最大允许缩放值
-    float maxScaleSize = 5;
+    float maxScaleSize = 10;
     //最小允许缩放值
     float minScaleSize = 0.8f;
     //缩放监听
@@ -148,17 +148,21 @@ public class ChartView extends View {
      * 模拟数据
      */
     private void initData() {
-        for (int i = 200; i < 400; i++) {
-            pointList.add(new DataBean(i,400-i));
+        for (float i = 200; i < 400; i+=0.1) {
+            float random = (float) ((Math.random() * 11)/10-0.5);
+            pointList.add(new DataBean(i,400-i+random));
         }
-        for (int i = 400; i < 600; i++) {
-            pointList.add(new DataBean(i,2*(i-400)));
+        for (float i = 400; i < 600; i+=0.1) {
+            float random = (float) ((Math.random() * 11)/10-0.5);
+            pointList.add(new DataBean(i,2*(i-400+random)));
         }
-        for (int i = 600; i < 1000; i++) {
-            pointList.add(new DataBean(i,i-200));
+        for (float i = 600; i < 1000; i+=0.1) {
+            float random = (float) ((Math.random() * 11)/10-0.5);
+            pointList.add(new DataBean(i,i-200+random));
         }
-        for (int i = 1000; i < 1800; i++) {
-            pointList.add(new DataBean(i,800-i+1000));
+        for (float i = 1000; i < 1800; i+=0.1) {
+            float random = (float) ((Math.random() * 11)/10-0.5);
+            pointList.add(new DataBean(i,800-i+1000+random));
         }
 //        pointList.add(new DataBean(200,200));
 //        pointList.add(new DataBean(400,0));
