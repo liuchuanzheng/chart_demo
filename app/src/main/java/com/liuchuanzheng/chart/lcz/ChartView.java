@@ -8,7 +8,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -83,9 +82,7 @@ public class ChartView extends View {
     //缩放点坐标
     float scaleFousX = 0.0f;
     float scaleFousY = 0.0f;
-    //起始point位置
-    float startPointX = 0;
-    float startPointY = 0;
+
 
 
     //尺子的最大刻度
@@ -98,18 +95,28 @@ public class ChartView extends View {
 
     //是否显示刻度尺
     boolean isShowRuler = false;
-    //上次触摸点
-    int lastRulerX;
-    int lastRulerY;
+    //是否显示背景网格线
+    boolean isShowBackGroundLine = true;
+
     //总平移距离
-    int totalRulerX;
+    int totalRulerTranslateX;
     //总平移距离
-    int totalRulerY;
+    int totalRulerTranlateY;
 
     int mRuler10Height = 40;
     int mRuler5Height = 25;
     int mRuler1Height = 15;
     float mRulerDx = bigSpace/5;
+
+    //原始坐标的最大值最小值记录
+    int minXPosition = 0;
+    int minYPosition = 0;
+    float minX = 0;
+    float minY = 0;
+    int maxXPosition = 0;
+    int maxYPosition = 0;
+    float maxX = 0;
+    float maxY = 0;
 
 
 
@@ -141,10 +148,50 @@ public class ChartView extends View {
      * 模拟数据
      */
     private void initData() {
-        pointList.add(new DataBean(200,200));
-        pointList.add(new DataBean(400,0));
-        pointList.add(new DataBean(600,800));
-        pointList.add(new DataBean(800,900));
+        for (int i = 200; i < 400; i++) {
+            pointList.add(new DataBean(i,400-i));
+        }
+        for (int i = 400; i < 600; i++) {
+            pointList.add(new DataBean(i,2*(i-400)));
+        }
+        for (int i = 600; i < 1000; i++) {
+            pointList.add(new DataBean(i,i-200));
+        }
+        for (int i = 1000; i < 1800; i++) {
+            pointList.add(new DataBean(i,800-i+1000));
+        }
+//        pointList.add(new DataBean(200,200));
+//        pointList.add(new DataBean(400,0));
+//        pointList.add(new DataBean(600,800));
+//        pointList.add(new DataBean(800,900));
+
+         minXPosition = 0;
+         minYPosition = 0;
+         minX = pointList.get(0).x;
+         minY = pointList.get(0).y;
+         maxXPosition = 0;
+         maxYPosition = 0;
+         maxX = pointList.get(0).x;
+         maxY = pointList.get(0).y;
+        for (int i = 0; i < pointList.size(); i++) {
+            if ( pointList.get(i).x<minX){
+                minX = pointList.get(i).x;
+                minXPosition = i;
+            }
+            if ( pointList.get(i).y<minY){
+                minY = pointList.get(i).y;
+                minYPosition = i;
+            }
+            if ( pointList.get(i).x>maxX){
+                maxX = pointList.get(i).x;
+                maxXPosition = i;
+            }
+            if ( pointList.get(i).y>maxY){
+                maxY = pointList.get(i).y;
+                maxYPosition = i;
+            }
+
+        }
 
         lastPointList.clear();
         lastPointList.addAll(depCopy(pointList));
@@ -224,7 +271,10 @@ public class ChartView extends View {
         this.canvas = canvas;
         canvas.concat(mMatrix);
         //画方格
-        drawBackgroundSquareLine(canvas);
+        if (isShowBackGroundLine) {
+            drawBackgroundSquareLine(canvas);
+        }
+
         //画心电图点
         drawPoints(canvas);
         //画标尺
@@ -249,7 +299,6 @@ public class ChartView extends View {
         Path path = new Path();
         //先移动到第一个点的位置
         path.moveTo(((lastPointList.get(0).x)),((lastPointList.get(0).y)));
-        Log.i(TAG,"第一个点坐标"+lastPointList.get(0).x+"++" +lastPointList.get(0).y);
         //绘制折线
         for (int i = 0; i < lastPointList.size(); i++) {
             path.lineTo(lastPointList.get(i).x,lastPointList.get(i).y);
@@ -262,6 +311,7 @@ public class ChartView extends View {
         lastTranslateY = 0;
         lastScaleFactor = 1;
 
+
     }
 
     /**
@@ -271,24 +321,67 @@ public class ChartView extends View {
      */
     private void checkAndChangePoints() {
         //判断是否越界,超出后要回到起点
-        float preDistanceX =(pointList.get(0).x - 0)*preScale;
-        float preDistanceY =(pointList.get(0).y - 0)*preScale;
-        if (lastPointList.get(0).x>=preDistanceX || lastPointList.get(0).y>=preDistanceY) {
+
+        //先进行右下角校验,再进行左上角校验,这样保证左上角优先
+        float pre0DistanceX =(pointList.get(0).x - 0)*preScale;
+        float pre0DistanceY =(pointList.get(0).y - 0)*preScale;
+
+
+        //右下角不能在往里拖了
+        if ((lastPointList.get(maxXPosition).x -getWidth()<=0
+                || lastPointList.get(maxYPosition).y -getHeight()<=0)) {
+            //如果最后一个点超出屏幕
             //说明超出边界.超出后要回到起点
             float tempx = 0;
             float tempy = 0;
-            if (lastPointList.get(0).x>=preDistanceX ) {
+            if (lastPointList.get(maxXPosition).x -getWidth()<=0
+                    && lastPointList.get(maxXPosition).x <=pointList.get(maxXPosition).x) {
+                //如果最后一个点超出屏幕,并且比原来靠左
+                //说明超出边界.超出后要回到最大左移距离
+                //越界距离
+                if (pointList.get(maxXPosition).x-getWidth()>0){
+                    tempx =getWidth()-lastPointList.get(maxXPosition).x;
+                }else{
+                    tempx =pointList.get(maxXPosition).x-lastPointList.get(maxXPosition).x;
+                }
+
+            }
+            if (lastPointList.get(maxYPosition).y -getHeight()<=0
+                    && lastPointList.get(maxYPosition).y <=pointList.get(maxYPosition).y) {
+                //说明超出边界.超出后要回到最大左移距离
+                //越界距离
+
+                if (pointList.get(maxYPosition).y-getHeight()>0){
+                    //大于长度
+                    tempy =getHeight()-lastPointList.get(maxYPosition).y;
+                }else{
+                    tempy =pointList.get(maxYPosition).y-lastPointList.get(maxYPosition).y;
+                }
+            }
+            if (tempx != 0 || tempy!=0){
+                for (int i = 0; i < lastPointList.size(); i++) {
+                    //只要有一边越界,就变换原始坐标值
+                    DataBean lastDataBean = lastPointList.get(i);
+                    lastDataBean.x+= tempx;
+                    lastDataBean.y+= tempy;
+                }
+            }
+        }
+        //左上角不能在往里拖了
+        if (lastPointList.get(0).x>=pre0DistanceX || lastPointList.get(0).y>=pre0DistanceY) {
+            //说明超出边界.超出后要回到起点
+            float tempx = 0;
+            float tempy = 0;
+            if (lastPointList.get(0).x>=pre0DistanceX ) {
                 //说明超出边界.超出后要回到起点
                 //越界距离
-                tempx =lastPointList.get(0).x-preDistanceX;
-                Log.i(TAG,"**"+lastPointList.get(0).x+"++" +preDistanceX);
+                tempx =lastPointList.get(0).x-pre0DistanceX;
             }
-            if (lastPointList.get(0).y>=preDistanceY ) {
+            if (lastPointList.get(0).y>=pre0DistanceY ) {
                 //说明超出边界.超出后要回到起点
                 //越界距离
-                tempy =lastPointList.get(0).y-preDistanceY;
+                tempy =lastPointList.get(0).y-pre0DistanceY;
             }
-            Log.i(TAG,"tempx:"+tempx+"tempy:"+tempy+"#"+lastPointList.get(0).x+"++" +lastPointList.get(0).y);
             if (tempx != 0 || tempy!=0){
                 for (int i = 0; i < lastPointList.size(); i++) {
                     //只要有一边越界,就变换原始坐标值
@@ -298,6 +391,8 @@ public class ChartView extends View {
                 }
             }
         }
+
+
     }
 
     private void drawBackgroundSquareLine(Canvas canvas) {
@@ -333,21 +428,32 @@ public class ChartView extends View {
 
     }
     private void drawRuler(){
+        checkRuler();
         //尺子也要随着放大而放大
         //画横向尺子
         canvas.save();
         //因为手指拖动了
-        canvas.translate(totalRulerX,totalRulerY);
+        canvas.translate(totalRulerTranslateX, totalRulerTranlateY);
         canvas.translate(200,1000);
         canvas.drawLine(0, 0, maxRuler*mRulerDx*preScale, 0, mRulerLinePaint);
         for (float i = minRuler; i < maxRuler; i++) {
             if (i % 10 == 0) {
-                canvas.drawLine(0, 0, 0, mRuler10Height*preScale, mRulerLinePaint);
+                if(i != 0){
+                    canvas.drawLine(0, 0, 0, mRuler10Height*preScale, mRulerLinePaint);
+                }
                 String text = i / 100 + "";
                 Rect rect = new Rect();
                 float txtWidth = mRulerTextPaint.measureText(text);
                 mRulerTextPaint.getTextBounds(text, 0, text.length(), rect);
-                canvas.drawText(text, 0 - txtWidth / 2, mRuler10Height*preScale + rect.height() + 10, mRulerTextPaint);
+                if(i != 0){
+                    canvas.drawText(text, 0 - txtWidth / 2, mRuler10Height*preScale + rect.height() + 10, mRulerTextPaint);
+
+                }else{
+                    canvas.drawText("ms", 0 - txtWidth / 2, mRuler10Height*preScale + rect.height() + 10, mRulerTextPaint);
+                    //画0
+                    canvas.drawText("0", 0 - txtWidth / 2-mRuler5Height, (mRuler10Height+rect.height() + 10)/2, mRulerTextPaint);
+                }
+
             } else if (i % 5 == 0) {
                 canvas.drawLine(0, 0, 0, mRuler5Height*preScale, mRulerLinePaint);
             } else {
@@ -359,13 +465,16 @@ public class ChartView extends View {
 
         //画竖向尺子
         canvas.save();
-        canvas.translate(totalRulerX,totalRulerY);
+        canvas.translate(totalRulerTranslateX, totalRulerTranlateY);
         canvas.rotate(90);
         canvas.translate(1000,-200);
         canvas.drawLine(0, 0, -(maxRuler*mRulerDx*preScale), 0, mRulerLinePaint);
         for (float i = minRuler; i < maxRuler; i++) {
             if (i % 10 == 0) {
-                canvas.drawLine(0, 0, 0, mRuler10Height*preScale, mRulerLinePaint);
+                if(i != 0){
+                    canvas.drawLine(0, 0, 0, mRuler10Height*preScale, mRulerLinePaint);
+                }
+
                 String text = i / 100 + "";
                 Rect rect = new Rect();
                 float txtWidth = mRulerTextPaint.measureText(text);
@@ -373,7 +482,11 @@ public class ChartView extends View {
                 //为了把文字转向
                 canvas.save();
                 canvas.rotate(-90,0, 0 );
-                canvas.drawText(text, 0 - txtWidth -mRuler10Height*preScale-10*preScale,  rect.height()/2, mRulerTextPaint);
+                if(i != 0){
+                    canvas.drawText(text, 0 - txtWidth -mRuler10Height*preScale-10,  rect.height()/2, mRulerTextPaint);
+                }else{
+                    canvas.drawText("µV", 0 - txtWidth -mRuler10Height*preScale-10,  rect.height()/2, mRulerTextPaint);
+                }
                 canvas.restore();
             } else if (i % 5 == 0) {
                 canvas.drawLine(0, 0, 0, mRuler5Height*preScale, mRulerLinePaint);
@@ -383,6 +496,25 @@ public class ChartView extends View {
             canvas.translate(-mRulerDx*preScale, 0);
         }
         canvas.restore();
+    }
+
+    /**
+     * 检查尺子,并校正尺子位置
+     * 只判断尺子原点是否出了屏幕就行
+     */
+    private void checkRuler() {
+        //留一个缝隙
+        if (totalRulerTranslateX <-(200-10)){
+            totalRulerTranslateX = -(200-10);
+        }else if(totalRulerTranslateX >=getWidth()-(200+10)){
+            totalRulerTranslateX = getWidth()-(200+10);
+        }
+        if (totalRulerTranlateY <-(1000-10)){
+            totalRulerTranlateY = -(1000-10);
+        }else if(totalRulerTranlateY >=getHeight()-(1000+10)){
+            totalRulerTranlateY = getHeight()-(1000+10);
+        }
+
     }
 
     @Override
@@ -456,8 +588,8 @@ public class ChartView extends View {
 
     private void scrollMySelf(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
         if (isShowRuler){
-            totalRulerX -= distanceX;
-            totalRulerY -= distanceY;
+            totalRulerTranslateX -= distanceX;
+            totalRulerTranlateY -= distanceY;
         }else{
             lastTranslateX= -distanceX;
             lastTranslateY = -distanceY;
@@ -496,11 +628,7 @@ public class ChartView extends View {
 
         return true;
     }
-    //显示或隐藏标尺
-    public void showOrHideRuler(boolean isShow){
-        isShowRuler = isShow;
-        invalidate();
-    }
+
 
     public int dip2px(int dp) {
         float density = getContext().getResources().getDisplayMetrics().density;
@@ -513,5 +641,36 @@ public class ChartView extends View {
     public int sp2px(int spValue) {
         final float fontScale = getContext().getResources().getDisplayMetrics().scaledDensity;
         return (int) (spValue * fontScale + 0.5f);
+    }
+
+    //显示或隐藏标尺
+    public void showOrHideRuler(boolean isShow){
+        isShowRuler = isShow;
+        invalidate();
+    }
+
+    //是否显示背景网格线
+    public void showOrHideBackGroundLine(boolean isShow){
+        isShowBackGroundLine = isShow;
+        invalidate();
+    }
+
+    //还原状态
+    public void restore(){
+        curScale = 1.0f;
+        preScale = 1.0f;
+        scaleFousX = 0.0f;
+        scaleFousY = 0.0f;
+        lastTranslateX = 0;
+        lastTranslateY = 0;
+        totalRulerTranslateX = 0;
+        totalRulerTranlateY = 0;
+        isCanMove = false;
+        isShowBackGroundLine = true;
+        isShowRuler = false;
+        lastPointList.clear();
+        lastPointList.addAll(depCopy(pointList));
+
+        invalidate();
     }
 }
