@@ -117,6 +117,14 @@ public class ChartView extends View {
     int maxYPosition = 0;
     float maxX = 0;
     float maxY = 0;
+    //原始的12导联数据
+    ArrayList<DaolianBean> originTotalDaolianList = new ArrayList<>();
+    //经过增益变化后或显示隐藏某个导联的数据
+    ArrayList<DaolianBean> totalDaolianList = new ArrayList<>();
+    int zengyi  = 1;
+
+    //显示的导联
+    ArrayList<Integer> daolianSelectedList = new ArrayList<>();
 
 
 
@@ -148,35 +156,90 @@ public class ChartView extends View {
      * 模拟数据
      */
     private void initData() {
-        for (float i = 200; i < 400; i+=0.1) {
-            float random = (float) ((Math.random() * 11)/10-0.5);
-            pointList.add(new DataBean(i,400-i+random));
-        }
-        for (float i = 400; i < 600; i+=0.1) {
-            float random = (float) ((Math.random() * 11)/10-0.5);
-            pointList.add(new DataBean(i,2*(i-400+random)));
-        }
-        for (float i = 600; i < 1000; i+=0.1) {
-            float random = (float) ((Math.random() * 11)/10-0.5);
-            pointList.add(new DataBean(i,i-200+random));
-        }
-        for (float i = 1000; i < 1800; i+=0.1) {
-            float random = (float) ((Math.random() * 11)/10-0.5);
-            pointList.add(new DataBean(i,800-i+1000+random));
-        }
-//        pointList.add(new DataBean(200,200));
-//        pointList.add(new DataBean(400,0));
-//        pointList.add(new DataBean(600,800));
-//        pointList.add(new DataBean(800,900));
+       /* for (int a = 0; a < 4; a++) {
+            DaolianBean daolianBean = new DaolianBean();
+            for (float i = 200; i < 400; i+=1) {
+                float random = (float) ((Math.random() * 11)-5);
+                daolianBean.getPointList().add(new DataBean(i,400+random+a*100));
+            }
+            originTotalDaolianList.add(daolianBean);
+        }*/
 
-         minXPosition = 0;
-         minYPosition = 0;
-         minX = pointList.get(0).x;
-         minY = pointList.get(0).y;
-         maxXPosition = 0;
-         maxYPosition = 0;
-         maxX = pointList.get(0).x;
-         maxY = pointList.get(0).y;
+        DaolianBean daolianBean1 = new DaolianBean();
+        for (float i = 200; i < 400; i+=1) {
+            float random = (float) ((Math.random() * 11)-5);
+            daolianBean1.getPointList().add(new DataBean(i,400+random));
+        }
+        DaolianBean daolianBean2 = new DaolianBean();
+        for (float i = 200; i < 400; i+=1) {
+            float random = (float) ((Math.random() * 11)-5);
+            daolianBean2.getPointList().add(new DataBean(i,400+random));
+        }
+        DaolianBean daolianBean3 = new DaolianBean();
+        for (float i = 200; i < 400; i+=1) {
+            float random = (float) ((Math.random() * 11)-5);
+            daolianBean3.getPointList().add(new DataBean(i,400+random));
+        }
+        DaolianBean daolianBean4 = new DaolianBean();
+        for (float i = 200; i < 400; i+=1) {
+            float random = (float) ((Math.random() * 11)-5);
+            daolianBean4.getPointList().add(new DataBean(i,400-i/8+random));
+        }
+
+
+        originTotalDaolianList.add(daolianBean1);
+        originTotalDaolianList.add(daolianBean2);
+        originTotalDaolianList.add(daolianBean3);
+        originTotalDaolianList.add(daolianBean4);
+
+        //默认选中所有12个导联
+        ArrayList<Integer> list = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            list.add(i);
+        }
+        daolianSelectedList.clear();
+        daolianSelectedList.addAll(list);
+
+        calculateData();
+    }
+    //计算数据,进行处理
+    private void calculateData() {
+        totalDaolianList.clear();
+        pointList.clear();
+        List<DaolianBean> tempList = depCopy(originTotalDaolianList);
+        float addY = 0;
+        for (int i = 0; i < tempList.size(); i++) {
+            if (daolianSelectedList.contains(i)){
+                for (DataBean dataBean : tempList.get(i).getPointList()) {
+                    dataBean.y += addY;
+                }
+                totalDaolianList.add(tempList.get(i));
+                addY += 100;
+            }
+        }
+//        totalDaolianList.addAll(depCopy(originTotalDaolianList));
+        for (DaolianBean daolianBean : totalDaolianList) {
+            for (DataBean dataBean : daolianBean.getPointList()) {
+                //增益算法
+                dataBean.x = dataBean.x*zengyi-200* (zengyi-1);
+                pointList.add(dataBean);
+            }
+        }
+
+        minXPosition = 0;
+        minYPosition = 0;
+        if (pointList.size() >0){
+            minX = pointList.get(0).x;
+            minY = pointList.get(0).y;
+        }
+
+        maxXPosition = 0;
+        maxYPosition = 0;
+        if (pointList.size() >0){
+            maxX = pointList.get(0).x;
+            maxY = pointList.get(0).y;
+        }
+
         for (int i = 0; i < pointList.size(); i++) {
             if ( pointList.get(i).x<minX){
                 minX = pointList.get(i).x;
@@ -200,6 +263,7 @@ public class ChartView extends View {
         lastPointList.clear();
         lastPointList.addAll(depCopy(pointList));
     }
+
     /***
      * 方法一对集合进行深拷贝 注意需要对泛型类进行序列化(实现Serializable)
      *
@@ -289,6 +353,9 @@ public class ChartView extends View {
     }
 
     private void drawPoints(Canvas canvas) {
+        if (pointList.size() <=0){
+            return;
+        }
         //不管三七二十一,先根据平移距离和缩放倍数计算出每个point对应的变化后坐标
         //这里一定要考虑缩放的手指位置,让用户看起来是基于手指中心处缩放.
         for (int i = 0; i < lastPointList.size(); i++) {
@@ -305,7 +372,12 @@ public class ChartView extends View {
         path.moveTo(((lastPointList.get(0).x)),((lastPointList.get(0).y)));
         //绘制折线
         for (int i = 0; i < lastPointList.size(); i++) {
-            path.lineTo(lastPointList.get(i).x,lastPointList.get(i).y);
+            if (i == 0 ||i == 200 ||i == 400 ||i == 600){
+                path.moveTo(lastPointList.get(i).x,lastPointList.get(i).y);
+            }else {
+                path.lineTo(lastPointList.get(i).x,lastPointList.get(i).y);
+            }
+
         }
         canvas.drawPath(path, pointPaint);
 
@@ -324,6 +396,9 @@ public class ChartView extends View {
      * 这里的边界不是屏幕,也不是原始坐标相对于坐标原点距离,而是根据放大倍数计算出来的
      */
     private void checkAndChangePoints() {
+        if (pointList.size() <=0){
+            return;
+        }
         //判断是否越界,超出后要回到起点
 
         //先进行右下角校验,再进行左上角校验,这样保证左上角优先
@@ -659,6 +734,26 @@ public class ChartView extends View {
         invalidate();
     }
 
+    //增益倍数
+    public void zengyi(int  a){
+        zengyi = a;
+        calculateData();
+        invalidate();
+    }
+
+    //显示导联
+    public void daolianSelect(ArrayList<Integer> list){
+
+        if (list == null){
+            return;
+        }
+        daolianSelectedList.clear();
+        daolianSelectedList.addAll(list);
+        calculateData();
+        invalidate();
+
+    }
+
     //还原状态
     public void restore(){
         curScale = 1.0f;
@@ -672,9 +767,17 @@ public class ChartView extends View {
         isCanMove = false;
         isShowBackGroundLine = true;
         isShowRuler = false;
+        zengyi = 1;
         lastPointList.clear();
         lastPointList.addAll(depCopy(pointList));
-
+        //默认选中所有12个导联
+        ArrayList<Integer> list = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            list.add(i);
+        }
+        daolianSelectedList.clear();
+        daolianSelectedList.addAll(list);
+        calculateData();
         invalidate();
     }
 }
