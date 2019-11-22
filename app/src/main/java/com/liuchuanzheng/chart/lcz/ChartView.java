@@ -67,6 +67,13 @@ public class ChartView extends View {
     private float preScale = 1.0f;//之前的伸缩值
     private float curScale = 1.0f;//当前的伸缩值
     private float lastScaleFactor = 1.0f;//相对于上一次的缩放因子
+
+
+    //原始数据点导联左端的坐标
+    ArrayList<DaolianTextBean> daolianTextpointList = new ArrayList<>();
+    //上一次变换之后的点坐标. 这里拿到的就是最后画到上边的点坐标
+    //导联左端的坐标
+    ArrayList<DaolianTextBean> lastDaolianTextPointList = new ArrayList<>();
     //大方格边长
     float bigSpace = 100;
     //小方格边长
@@ -169,23 +176,23 @@ public class ChartView extends View {
 
         DaolianBean daolianBean1 = new DaolianBean();
         for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 11)-5);
-            daolianBean1.getPointList().add(new DataBean(i,400+random));
+            float random = (float) ((Math.random() * 41)-20);
+            daolianBean1.getPointList().add(new DataBean(i,random));
         }
         DaolianBean daolianBean2 = new DaolianBean();
         for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 11)-5);
-            daolianBean2.getPointList().add(new DataBean(i,400+random));
+            float random = (float) ((Math.random() * 41)-20);
+            daolianBean2.getPointList().add(new DataBean(i,random));
         }
         DaolianBean daolianBean3 = new DaolianBean();
         for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 11)-5);
-            daolianBean3.getPointList().add(new DataBean(i,400+random));
+            float random = (float) ((Math.random() * 41)-20);
+            daolianBean3.getPointList().add(new DataBean(i,random));
         }
         DaolianBean daolianBean4 = new DaolianBean();
         for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 11)-5);
-            daolianBean4.getPointList().add(new DataBean(i,400-i/8+random));
+            float random = (float) ((Math.random() * 41)-20);
+            daolianBean4.getPointList().add(new DataBean(i,random));
         }
 
 
@@ -193,6 +200,8 @@ public class ChartView extends View {
         originTotalDaolianList.add(daolianBean2);
         originTotalDaolianList.add(daolianBean3);
         originTotalDaolianList.add(daolianBean4);
+        //取反坐标轴
+        jiaozhengZuobiaoxi();
 
         //默认选中所有12个导联
         ArrayList<Integer> list = new ArrayList<>();
@@ -204,6 +213,15 @@ public class ChartView extends View {
 
         calculateData();
     }
+    //因为Android 坐标系y轴与心电图的坐标系相反,这里进行一次取反.
+    //防止把图画倒.要保证只进行一次取反.
+    private void jiaozhengZuobiaoxi(){
+        for (DaolianBean daolianBean : originTotalDaolianList) {
+            for (DataBean dataBean : daolianBean.getPointList()) {
+                dataBean.y *= -1;
+            }
+        }
+    }
     //计算数据,进行处理
     //主要是根据选择的显示导联,去除无用导联,并进行增益,最终合并入一个统一的大list,便于绘制和判断边界点.
     //核心思想:虽然绘制了多个导联,实际上我只是在绘制一个list中的所有点.
@@ -214,13 +232,29 @@ public class ChartView extends View {
         float addY = 0;
         for (int i = 0; i < tempList.size(); i++) {
             if (daolianSelectedList.contains(i)){
-                for (DataBean dataBean : tempList.get(i).getPointList()) {
-                    dataBean.y += addY;
+                float maxY = tempList.get(i).getPointList().get(0).y;
+                float minY = tempList.get(i).getPointList().get(0).y;
+
+                for (int i1 = 0; i1 < tempList.get(i).getPointList().size(); i1++) {
+                    DataBean dataBean = tempList.get(i).getPointList().get(i1);
+                    if (dataBean.y> maxY) {
+                        maxY = dataBean.y;
+                        tempList.get(i).maxYPosition = i1;
+                    }
+
+                    if (dataBean.y< minY) {
+                        minY = dataBean.y;
+                        tempList.get(i).minYPosition = i1;
+                    }
+                    //加上之前的导联距离后,在加上自身的基线高度.
+                    dataBean.y += (addY +Math.abs(minY));
                 }
+                //导联间隔
+                float distanceDaolian = maxY-minY;
                 totalDaolianList.add(tempList.get(i));
                 //todo 每个导联增加y的距离,防止重叠
                 //要根据不同导联的高度进行差异增加,这里先临时增加100
-                addY += 100;
+                addY += distanceDaolian;
             }
         }
 //        totalDaolianList.addAll(depCopy(originTotalDaolianList));
@@ -359,6 +393,8 @@ public class ChartView extends View {
 
         //画心电图点
         drawPoints(canvas);
+        //画导联左边的文字
+        drawDaoLianText(canvas);
         //画标尺
         if(isShowRuler){
             drawRuler();
@@ -489,7 +525,17 @@ public class ChartView extends View {
     }
     //画每个导联左端的数字
     private void drawDaoLianText(Canvas canvas){
-
+        float minY = lastPointList.get(0).y;
+        float maxY = lastPointList.get(0).y;
+        for (int i = 0; i < 200; i++) {
+            if (lastPointList.get(i).y>maxY) {
+                maxY = lastPointList.get(i).y;
+            }
+            if (lastPointList.get(i).y<minY) {
+                minY = lastPointList.get(i).y;
+            }
+        }
+        canvas.drawText("I", 50, (maxY+minY)/2, daolianTextPaint);
     }
 
     private void drawBackgroundSquareLine(Canvas canvas) {
@@ -754,6 +800,11 @@ public class ChartView extends View {
 
     //增益倍数
     public void zengyi(int  a){
+        if (a == zengyi){
+            //如果本次增益和上次增益相同,不起作用,防止回到初始状态
+            return;
+        }
+        restore();
         zengyi = a;
         calculateData();
         invalidate();
@@ -761,14 +812,34 @@ public class ChartView extends View {
 
     //显示导联
     public void daolianSelect(ArrayList<Integer> list){
-
         if (list == null){
             return;
         }
+        if (isSameList(list,daolianSelectedList)){
+            //如果两个集合一样
+            return;
+        }
+        restore();
         daolianSelectedList.clear();
         daolianSelectedList.addAll(list);
         calculateData();
         invalidate();
+
+    }
+    public boolean isSameList(ArrayList<Integer> firstList,ArrayList<Integer> secondList){
+        if (firstList == null || secondList == null){
+           return false;
+        }
+        if (firstList.size() == secondList.size()){
+            for (Integer integer : firstList) {
+                if (!secondList.contains(integer)) {
+                    return false;
+                }
+            }
+            return true;
+        }else{
+            return false;
+        }
 
     }
 
