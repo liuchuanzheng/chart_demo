@@ -13,36 +13,49 @@
         android:layout_height="match_parent" />
     <LinearLayout
         android:layout_alignParentBottom="true"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
-        <Button
-            android:text="显示尺子"
-            android:id="@+id/btn_isShowRuler"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <Button
-            android:text="隐藏网格线"
-            android:id="@+id/btn_isShowBackGroundLine"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <Button
-            android:text="重置"
-            android:id="@+id/btn_restore"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+        <LinearLayout
 
-        <Button
-            android:text="增益"
-            android:id="@+id/btn_zengyi"
+            android:orientation="horizontal"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <Button
-            android:text="选择导联"
-            android:id="@+id/btn_selectDaoLian"
+            android:layout_height="wrap_content">
+            <Button
+                android:text="显示尺子"
+                android:id="@+id/btn_isShowRuler"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+            <Button
+                android:text="隐藏网格线"
+                android:id="@+id/btn_isShowBackGroundLine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+            <Button
+                android:text="重置"
+                android:id="@+id/btn_restore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:text="增益"
+                android:id="@+id/btn_zengyi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_alignParentBottom="true"
+            android:orientation="horizontal"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content">
+            <Button
+                android:text="选择导联"
+                android:id="@+id/btn_selectDaoLian"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
     </LinearLayout>
+
 
 
 </RelativeLayout>
