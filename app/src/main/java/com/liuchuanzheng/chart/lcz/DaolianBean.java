@@ -14,6 +14,11 @@ import java.util.ArrayList;
 public class DaolianBean implements Serializable {
     private boolean isShow = true;
     private ArrayList<DataBean> pointList = new ArrayList<>();
+    private String name = "";
+    private int minYPosition = 0;
+    private int maxYPosition = 0;
+    //最大的y跨度
+    private int distanceY= 0;
 
     public boolean isShow() {
         return isShow;

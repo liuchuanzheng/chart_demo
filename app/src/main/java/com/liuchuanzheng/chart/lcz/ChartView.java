@@ -42,6 +42,8 @@ public class ChartView extends View {
     private Paint backGroundSquarePaint_small;
     //折线图的点画笔
     private Paint pointPaint;
+    //导联左端的文字
+    private Paint daolianTextPaint;
     //控件宽
     private int mWidth;
     //控件高
@@ -203,6 +205,8 @@ public class ChartView extends View {
         calculateData();
     }
     //计算数据,进行处理
+    //主要是根据选择的显示导联,去除无用导联,并进行增益,最终合并入一个统一的大list,便于绘制和判断边界点.
+    //核心思想:虽然绘制了多个导联,实际上我只是在绘制一个list中的所有点.
     private void calculateData() {
         totalDaolianList.clear();
         pointList.clear();
@@ -214,18 +218,20 @@ public class ChartView extends View {
                     dataBean.y += addY;
                 }
                 totalDaolianList.add(tempList.get(i));
+                //todo 每个导联增加y的距离,防止重叠
+                //要根据不同导联的高度进行差异增加,这里先临时增加100
                 addY += 100;
             }
         }
 //        totalDaolianList.addAll(depCopy(originTotalDaolianList));
         for (DaolianBean daolianBean : totalDaolianList) {
             for (DataBean dataBean : daolianBean.getPointList()) {
-                //增益算法
+                //x增益算法
                 dataBean.x = dataBean.x*zengyi-200* (zengyi-1);
                 pointList.add(dataBean);
             }
         }
-
+        //计算出所有点的最大,最小边界,便于边界拖动处理.
         minXPosition = 0;
         minYPosition = 0;
         if (pointList.size() >0){
@@ -314,6 +320,14 @@ public class ChartView extends View {
         pointPaint.setAntiAlias(true);
         //不填充
         pointPaint.setStyle(Paint.Style.STROKE);
+
+        //导联左端文字画笔
+        daolianTextPaint = new Paint();
+        daolianTextPaint.setColor(Color.parseColor("#FFFFFF"));
+        daolianTextPaint.setAntiAlias(true);
+        daolianTextPaint.setStyle(Paint.Style.FILL);
+        daolianTextPaint.setStrokeWidth(1);
+        daolianTextPaint.setTextSize(40);
 
         initRulerPaint();
 
@@ -471,6 +485,10 @@ public class ChartView extends View {
             }
         }
 
+
+    }
+    //画每个导联左端的数字
+    private void drawDaoLianText(Canvas canvas){
 
     }
 
