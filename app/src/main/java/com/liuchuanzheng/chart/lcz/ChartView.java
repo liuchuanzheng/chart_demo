@@ -332,7 +332,7 @@ public class ChartView extends View {
     private void initPaint() {
         //大网格线画笔
         backGroundSquarePaint_big = new Paint(Paint.ANTI_ALIAS_FLAG);
-        backGroundSquarePaint_big.setColor(Color.parseColor("#0198cd"));
+        backGroundSquarePaint_big.setColor(Color.parseColor("#FF3300"));
         backGroundSquarePaint_big.setStrokeWidth(2f);
         //抗锯齿
         backGroundSquarePaint_big.setAntiAlias(true);
