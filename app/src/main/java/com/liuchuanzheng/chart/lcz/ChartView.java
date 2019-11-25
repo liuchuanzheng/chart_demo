@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -130,11 +131,13 @@ public class ChartView extends View {
     ArrayList<DaolianBean> originTotalDaolianList = new ArrayList<>();
     //经过增益变化后或显示隐藏某个导联的数据
     ArrayList<DaolianBean> totalDaolianList = new ArrayList<>();
-    int zengyi  = 1;
+    int xZengyi = 1;
+    int yZengyi = 1;
 
     //显示的导联
     ArrayList<Integer> daolianSelectedList = new ArrayList<>();
-
+    String[] totalDaolianTexts = {"I","II","III","aVR","aVL","aVF","V1","V2","V3","V4","V5","V6"};
+    ArrayList<String> selectDaolianTexts = new ArrayList<>();
 
 
 
@@ -174,32 +177,25 @@ public class ChartView extends View {
             originTotalDaolianList.add(daolianBean);
         }*/
 
-        DaolianBean daolianBean1 = new DaolianBean();
-        for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 41)-20);
-            daolianBean1.getPointList().add(new DataBean(i,random));
-        }
-        DaolianBean daolianBean2 = new DaolianBean();
-        for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 41)-20);
-            daolianBean2.getPointList().add(new DataBean(i,random));
-        }
-        DaolianBean daolianBean3 = new DaolianBean();
-        for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 41)-20);
-            daolianBean3.getPointList().add(new DataBean(i,random));
-        }
-        DaolianBean daolianBean4 = new DaolianBean();
-        for (float i = 200; i < 400; i+=1) {
-            float random = (float) ((Math.random() * 41)-20);
-            daolianBean4.getPointList().add(new DataBean(i,random));
+
+        for (int a = 0; a < 12; a++) {
+            DaolianBean daolianBean = new DaolianBean();
+            int b = 1;
+            for (float i = 200; i < 1400; i+=10) {
+                float random =0;
+                if (b == 1){
+                    random = (float) ((Math.random() * 61));
+
+                }else{
+                    random = -(float) ((Math.random() * 61));
+                }
+                daolianBean.getPointList().add(new DataBean(i,random));
+                b*= -1;
+            }
+            originTotalDaolianList.add(daolianBean);
         }
 
 
-        originTotalDaolianList.add(daolianBean1);
-        originTotalDaolianList.add(daolianBean2);
-        originTotalDaolianList.add(daolianBean3);
-        originTotalDaolianList.add(daolianBean4);
         //取反坐标轴
         jiaozhengZuobiaoxi();
 
@@ -228,10 +224,12 @@ public class ChartView extends View {
     private void calculateData() {
         totalDaolianList.clear();
         pointList.clear();
+        selectDaolianTexts.clear();
         List<DaolianBean> tempList = depCopy(originTotalDaolianList);
         float addY = 0;
         for (int i = 0; i < tempList.size(); i++) {
             if (daolianSelectedList.contains(i)){
+                selectDaolianTexts.add(totalDaolianTexts[i]);
                 float maxY = tempList.get(i).getPointList().get(0).y;
                 float minY = tempList.get(i).getPointList().get(0).y;
 
@@ -261,7 +259,9 @@ public class ChartView extends View {
         for (DaolianBean daolianBean : totalDaolianList) {
             for (DataBean dataBean : daolianBean.getPointList()) {
                 //x增益算法
-                dataBean.x = dataBean.x*zengyi-200* (zengyi-1);
+                dataBean.x = dataBean.x* xZengyi -200* (xZengyi -1);
+                //y增益算法
+                dataBean.y = dataBean.y *yZengyi;
                 pointList.add(dataBean);
             }
         }
@@ -361,7 +361,7 @@ public class ChartView extends View {
         daolianTextPaint.setAntiAlias(true);
         daolianTextPaint.setStyle(Paint.Style.FILL);
         daolianTextPaint.setStrokeWidth(1);
-        daolianTextPaint.setTextSize(40);
+        daolianTextPaint.setTextSize(sp2px(11));
 
         initRulerPaint();
 
@@ -421,12 +421,15 @@ public class ChartView extends View {
         //先移动到第一个点的位置
         path.moveTo(((lastPointList.get(0).x)),((lastPointList.get(0).y)));
         //绘制折线
+        ArrayList<Integer> selectedDaolianStartPositionList = getSelectedDaolianStartPositionList();
         for (int i = 0; i < lastPointList.size(); i++) {
-            if (i == 0 ||i == 200 ||i == 400 ||i == 600){
+            if (selectedDaolianStartPositionList.contains(i)) {
+                //每个导联的起始位置不连线
                 path.moveTo(lastPointList.get(i).x,lastPointList.get(i).y);
-            }else {
+            }else{
                 path.lineTo(lastPointList.get(i).x,lastPointList.get(i).y);
             }
+
 
         }
         canvas.drawPath(path, pointPaint);
@@ -438,7 +441,18 @@ public class ChartView extends View {
         lastScaleFactor = 1;
 
 
+
     }
+    //得到目前所选导联,合成一个大list的每个起始位置.
+    private ArrayList<Integer> getSelectedDaolianStartPositionList(){
+        ArrayList<Integer> selectedDaolianStartPositionList = new ArrayList<>();
+        int daolianStartPosition = 0;
+        for (int i = 0; i < totalDaolianList.size(); i++) {
+            daolianStartPosition += totalDaolianList.get(i).getPointList().size();
+            selectedDaolianStartPositionList.add(daolianStartPosition);
+        }
+        return selectedDaolianStartPositionList;
+    };
 
     /**
      * 检查点,并校正点
@@ -525,7 +539,7 @@ public class ChartView extends View {
     }
     //画每个导联左端的数字
     private void drawDaoLianText(Canvas canvas){
-        float minY = lastPointList.get(0).y;
+        /*float minY = lastPointList.get(0).y;
         float maxY = lastPointList.get(0).y;
         for (int i = 0; i < 200; i++) {
             if (lastPointList.get(i).y>maxY) {
@@ -535,7 +549,19 @@ public class ChartView extends View {
                 minY = lastPointList.get(i).y;
             }
         }
-        canvas.drawText("I", 50, (maxY+minY)/2, daolianTextPaint);
+        canvas.drawText("I", 50, (maxY+minY)/2, daolianTextPaint);*/
+        int maxYPosition = 0;
+        int minYPosition = 0;
+        int daolianStartPosition = 0;
+
+        for (int i = 0; i < totalDaolianList.size(); i++) {
+
+            maxYPosition = daolianStartPosition +totalDaolianList.get(i).maxYPosition;
+            minYPosition = daolianStartPosition +totalDaolianList.get(i).minYPosition;
+            canvas.drawText(selectDaolianTexts.get(i), 50, (lastPointList.get(maxYPosition).y+lastPointList.get(minYPosition).y)/2, daolianTextPaint);
+            daolianStartPosition += totalDaolianList.get(i).getPointList().size();
+
+        }
     }
 
     private void drawBackgroundSquareLine(Canvas canvas) {
@@ -786,6 +812,7 @@ public class ChartView extends View {
         return (int) (spValue * fontScale + 0.5f);
     }
 
+
     //显示或隐藏标尺
     public void showOrHideRuler(boolean isShow){
         isShowRuler = isShow;
@@ -799,13 +826,25 @@ public class ChartView extends View {
     }
 
     //增益倍数
-    public void zengyi(int  a){
-        if (a == zengyi){
+    public void xZengyi(int  a){
+        if (a == xZengyi){
             //如果本次增益和上次增益相同,不起作用,防止回到初始状态
             return;
         }
         restore();
-        zengyi = a;
+        xZengyi = a;
+        calculateData();
+        invalidate();
+    }
+
+    //增益倍数
+    public void yZengyi(int  a){
+        if (a == yZengyi){
+            //如果本次增益和上次增益相同,不起作用,防止回到初始状态
+            return;
+        }
+        restore();
+        yZengyi = a;
         calculateData();
         invalidate();
     }
@@ -856,7 +895,8 @@ public class ChartView extends View {
         isCanMove = false;
         isShowBackGroundLine = true;
         isShowRuler = false;
-        zengyi = 1;
+        xZengyi = 1;
+        yZengyi = 1;
         lastPointList.clear();
         lastPointList.addAll(depCopy(pointList));
         //默认选中所有12个导联

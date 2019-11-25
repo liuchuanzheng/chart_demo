@@ -15,7 +15,8 @@ public class MainActivity extends AppCompatActivity {
     boolean isShowBackGroundLine = true;
     Button btn_isShowRuler;
     Button btn_isShowBackGroundLine;
-    Button btn_zengyi;
+    Button btn_xzengyi;
+    Button btn_yzengyi;
     Button btn_restore;
     Button btn_selectDaoLian;
     ChartView cv;
@@ -25,7 +26,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main2);
         btn_isShowRuler = findViewById(R.id.btn_isShowRuler);
         btn_isShowBackGroundLine = findViewById(R.id.btn_isShowBackGroundLine);
-        btn_zengyi = findViewById(R.id.btn_zengyi);
+        btn_xzengyi = findViewById(R.id.btn_xzengyi);
+        btn_yzengyi = findViewById(R.id.btn_yzengyi);
         btn_restore = findViewById(R.id.btn_restore);
         btn_selectDaoLian = findViewById(R.id.btn_selectDaoLian);
         btn_isShowRuler.setOnClickListener(new View.OnClickListener() {
@@ -58,10 +60,16 @@ public class MainActivity extends AppCompatActivity {
                 cv.restore();
             }
         });
-        btn_zengyi.setOnClickListener(new View.OnClickListener() {
+        btn_xzengyi.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cv.zengyi(3);
+                cv.xZengyi(3);
+            }
+        });
+        btn_yzengyi.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cv.yZengyi(3);
             }
         });
 
@@ -73,6 +81,14 @@ public class MainActivity extends AppCompatActivity {
                 list.add(0);
                 list.add(1);
                 list.add(3);
+                list.add(4);
+                list.add(5);
+                list.add(6);
+                list.add(7);
+                list.add(8);
+                list.add(9);
+                list.add(10);
+                list.add(11);
                 cv.daolianSelect(list);
             }
         });

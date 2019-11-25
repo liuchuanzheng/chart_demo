@@ -38,8 +38,8 @@
                 android:layout_height="wrap_content"/>
 
             <Button
-                android:text="增益"
-                android:id="@+id/btn_zengyi"
+                android:text="x增益"
+                android:id="@+id/btn_xzengyi"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
@@ -51,6 +51,11 @@
             <Button
                 android:text="选择导联"
                 android:id="@+id/btn_selectDaoLian"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+            <Button
+                android:text="y增益"
+                android:id="@+id/btn_yzengyi"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
